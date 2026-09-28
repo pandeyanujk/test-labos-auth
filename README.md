@@ -21,13 +21,44 @@ npm run start:dev         # dev:  dev-directory.os.pl.xyz, portal directoryv2.de
 | `LABOS_ENV` | `prod` | `prod` or `dev` |
 | `PORT` | `3000` | Listen port |
 | `PUBLIC_URL` | `https://<Host header>` | Public URL of this app, used as the login `backlink` |
+| `TLS_CERT`, `TLS_KEY` | unset | Cert/key paths. When both are set the app serves HTTPS (port 443 by default) |
 
-## Testing
+## Testing locally (fake hostname under the cookie domain)
 
 The cookie is only sent to hosts under the LabOS cookie domain, so on `localhost`
-you will always get 401 (expected). To test for real, serve this app on a host like
-`<something>.os.pl.xyz` or `<something>.dev.os.pl.xyz`, e.g. via a reverse proxy
-or tunnel that has a hostname under that domain, then open it:
+you will always get 401. The trick is to give your machine a hostname under that
+domain, serve HTTPS on it, and open it in the browser where you are signed in to
+LabOS. Nothing leaves your machine except the calls to the LabOS API.
+
+```sh
+# 1. Point a *.os.pl.xyz name at your machine (prod cookie domain)
+echo "127.0.0.1 labos-test.os.pl.xyz" | sudo tee -a /etc/hosts
+#    or, for dev:  echo "127.0.0.1 labos-test.dev.os.pl.xyz" | sudo tee -a /etc/hosts
+
+# 2. Make a locally trusted cert (brew install mkcert / see mkcert README)
+mkcert -install
+mkdir -p certs
+mkcert -cert-file certs/cert.pem -key-file certs/key.pem labos-test.os.pl.xyz labos-test.dev.os.pl.xyz
+
+# 3. Run on 443 (needs sudo for the port). PATH is passed so sudo finds node.
+sudo env "PATH=$PATH" npm run start:local-https        # prod
+sudo env "PATH=$PATH" npm run start:local-https:dev    # dev
+```
+
+Then open **https://labos-test.os.pl.xyz/** (or `https://labos-test.dev.os.pl.xyz/`).
+
+Don't want sudo? Use a high port, e.g. `PORT=8443`, and open
+`https://labos-test.os.pl.xyz:8443/`. The login backlink includes the port, so
+the redirect back still works.
+
+If you already have the LabOS cookie from signing in at `https://os.pl.xyz`, the
+page should show your member card straight away. Otherwise click "Sign in with
+LabOS", sign in, and you get redirected back.
+
+## Testing on a real host
+
+Serve this app on a host like `<something>.os.pl.xyz` or
+`<something>.dev.os.pl.xyz`, then open it:
 
 1. Signed out → status 401, "Sign in with LabOS" button. Clicking it goes to
    `https://os.pl.xyz/members?backlink=<this app url>#login`.

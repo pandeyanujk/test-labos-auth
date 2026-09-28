@@ -4,8 +4,12 @@
 //   PORT                 listen port (default: 3000)
 //   PUBLIC_URL           public https URL of this app, used as the login backlink
 //                        (default: https://<Host header>)
+//   TLS_CERT, TLS_KEY    paths to a cert/key pair; when both are set the app
+//                        serves HTTPS (needed for the LabOS cookie on a local
+//                        *.os.pl.xyz hostname, see README)
 
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +31,11 @@ const ENVS = {
 
 const ENV_NAME = process.env.LABOS_ENV === 'dev' ? 'dev' : 'prod';
 const ENV = ENVS[ENV_NAME];
-const PORT = Number(process.env.PORT) || 3000;
+const TLS =
+  process.env.TLS_CERT && process.env.TLS_KEY
+    ? { cert: fs.readFileSync(process.env.TLS_CERT), key: fs.readFileSync(process.env.TLS_KEY) }
+    : null;
+const PORT = Number(process.env.PORT) || (TLS ? 443 : 3000);
 
 // --- cookie -> token -----------------------------------------------------
 
@@ -95,7 +103,7 @@ function serveStatic(res, file, type) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
+async function handler(req, res) {
   const url = new URL(req.url, 'http://localhost');
 
   // Public config for the browser side.
@@ -136,10 +144,13 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/healthz') return send(res, 200, 'ok', 'text/plain');
 
   send(res, 404, 'not found', 'text/plain');
-});
+}
+
+const server = TLS ? https.createServer(TLS, handler) : http.createServer(handler);
 
 server.listen(PORT, () => {
-  console.log(`labos-auth test app (${ENV_NAME}) listening on http://localhost:${PORT}`);
+  const scheme = TLS ? 'https' : 'http';
+  console.log(`labos-auth test app (${ENV_NAME}) listening on ${scheme}://localhost:${PORT}`);
   console.log(`  /me endpoint: ${ENV.meUrl}`);
   console.log(`  portal:       ${ENV.portal}`);
   console.log(`  cookie domain must be ${ENV.cookieDomain} -> serve this app on a host under it`);
