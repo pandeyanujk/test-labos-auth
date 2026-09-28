@@ -18,10 +18,10 @@ npm run start:dev         # dev:  dev-directory.os.pl.xyz, portal directoryv2.de
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `LABOS_ENV` | `prod` | `prod` or `dev` |
+| `LABOS_ENV` | `prod` | `prod` or `dev` (or pass `--dev`) |
 | `PORT` | `3000` | Listen port |
 | `PUBLIC_URL` | `https://<Host header>` | Public URL of this app, used as the login `backlink` |
-| `TLS_CERT`, `TLS_KEY` | unset | Cert/key paths. When both are set the app serves HTTPS (port 443 by default) |
+| `TLS_CERT`, `TLS_KEY` | `certs/cert.pem`, `certs/key.pem` | Cert/key paths. If the files exist the app serves HTTPS (port 443 by default) |
 
 ## Testing locally (fake hostname under the cookie domain)
 
@@ -29,6 +29,8 @@ The cookie is only sent to hosts under the LabOS cookie domain, so on `localhost
 you will always get 401. The trick is to give your machine a hostname under that
 domain, serve HTTPS on it, and open it in the browser where you are signed in to
 LabOS. Nothing leaves your machine except the calls to the LabOS API.
+
+### macOS / Linux
 
 ```sh
 # 1. Point a *.os.pl.xyz name at your machine (prod cookie domain)
@@ -40,16 +42,38 @@ mkcert -install
 mkdir -p certs
 mkcert -cert-file certs/cert.pem -key-file certs/key.pem labos-test.os.pl.xyz labos-test.dev.os.pl.xyz
 
-# 3. Run on 443 (needs sudo for the port). PATH is passed so sudo finds node.
-sudo env "PATH=$PATH" npm run start:local-https        # prod
-sudo env "PATH=$PATH" npm run start:local-https:dev    # dev
+# 3. Run. The app finds certs/ and serves HTTPS on 443 (sudo for the port).
+sudo env "PATH=$PATH" npm start          # prod
+sudo env "PATH=$PATH" npm run start:dev  # dev
 ```
 
-Then open **https://labos-test.os.pl.xyz/** (or `https://labos-test.dev.os.pl.xyz/`).
+Don't want sudo? `PORT=8443 npm start` and open `https://labos-test.os.pl.xyz:8443/`.
 
-Don't want sudo? Use a high port, e.g. `PORT=8443`, and open
-`https://labos-test.os.pl.xyz:8443/`. The login backlink includes the port, so
-the redirect back still works.
+### Windows (cmd)
+
+```bat
+:: 1. Hosts entry. Run this from an *Administrator* command prompt:
+echo 127.0.0.1 labos-test.os.pl.xyz>> %WINDIR%\System32\drivers\etc\hosts
+::    or, for dev:  echo 127.0.0.1 labos-test.dev.os.pl.xyz>> %WINDIR%\System32\drivers\etc\hosts
+
+:: 2. Locally trusted cert (winget is built into Windows 10/11)
+winget install FiloSottile.mkcert
+::    close and reopen the terminal so mkcert is on PATH, then:
+mkcert -install
+mkdir certs
+mkcert -cert-file certs\cert.pem -key-file certs\key.pem labos-test.os.pl.xyz labos-test.dev.os.pl.xyz
+
+:: 3. Run on a high port (no admin needed for the port on Windows, but 443 is
+::    often taken by other software)
+set PORT=8443&& npm start            :: prod
+set PORT=8443&& npm run start:dev    :: dev
+```
+
+Then open **https://labos-test.os.pl.xyz:8443/** (or `:8443` on the dev host).
+
+### What to expect
+
+The login backlink includes the port, so the redirect back still works.
 
 If you already have the LabOS cookie from signing in at `https://os.pl.xyz`, the
 page should show your member card straight away. Otherwise click "Sign in with

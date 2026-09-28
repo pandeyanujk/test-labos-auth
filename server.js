@@ -1,12 +1,13 @@
 // Standalone LabOS auth test app. No dependencies.
 //
-//   LABOS_ENV=prod|dev   picks API + portal (default: prod)
-//   PORT                 listen port (default: 3000)
+//   LABOS_ENV=prod|dev   picks API + portal (default: prod). `--dev` flag does the same.
+//   PORT                 listen port (default: 3000, or 443 with TLS)
 //   PUBLIC_URL           public https URL of this app, used as the login backlink
 //                        (default: https://<Host header>)
-//   TLS_CERT, TLS_KEY    paths to a cert/key pair; when both are set the app
-//                        serves HTTPS (needed for the LabOS cookie on a local
-//                        *.os.pl.xyz hostname, see README)
+//   TLS_CERT, TLS_KEY    paths to a cert/key pair. When both are set, or when
+//                        certs/cert.pem + certs/key.pem exist next to this file,
+//                        the app serves HTTPS (needed for the LabOS cookie on a
+//                        local *.os.pl.xyz hostname, see README)
 
 import http from 'node:http';
 import https from 'node:https';
@@ -29,12 +30,16 @@ const ENVS = {
   },
 };
 
-const ENV_NAME = process.env.LABOS_ENV === 'dev' ? 'dev' : 'prod';
+const ENV_NAME =
+  process.env.LABOS_ENV === 'dev' || process.argv.includes('--dev') ? 'dev' : 'prod';
 const ENV = ENVS[ENV_NAME];
-const TLS =
-  process.env.TLS_CERT && process.env.TLS_KEY
-    ? { cert: fs.readFileSync(process.env.TLS_CERT), key: fs.readFileSync(process.env.TLS_KEY) }
-    : null;
+function loadTls() {
+  const certPath = process.env.TLS_CERT || path.join(__dirname, 'certs', 'cert.pem');
+  const keyPath = process.env.TLS_KEY || path.join(__dirname, 'certs', 'key.pem');
+  if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) return null;
+  return { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) };
+}
+const TLS = loadTls();
 const PORT = Number(process.env.PORT) || (TLS ? 443 : 3000);
 
 // --- cookie -> token -----------------------------------------------------

@@ -7,8 +7,6 @@
   "engines": { "node": ">=18" },
   "scripts": {
     "start": "node server.js",
-    "start:dev": "LABOS_ENV=dev node server.js",
-    "start:local-https": "TLS_CERT=certs/cert.pem TLS_KEY=certs/key.pem node server.js",
-    "start:local-https:dev": "LABOS_ENV=dev TLS_CERT=certs/cert.pem TLS_KEY=certs/key.pem node server.js"
+    "start:dev": "node server.js --dev"
   }
 }
