@@ -1,0 +1,12 @@
+{
+  "name": "test-labos-auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone test app for LabOS auth (cookie -> /v1/ai-apps/me)",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "LABOS_ENV=dev node server.js"
+  }
+}
